@@ -1,9 +1,14 @@
-def manageWebConfig(String configContent, String operation, String nodeName, String newValue = null) {
+def call(String configContent, String operation, String nodeName, String newValue = null) {
     def result = [success: false, message: ""]
-
     def supportedOps = ["add", "delete", "update", "isexist"]
+
     if (!supportedOps.contains(operation.toLowerCase())) {
-        result.message = "Unsupported operation '${operation}'. Supported operations: ${supportedOps.join(', ')}"
+        result.message = "Unsupported operation '${operation}'."
+        return result
+    }
+
+    if (!configContent?.trim()) {
+        result.message = "web.config content is empty or null."
         return result
     }
 
@@ -14,36 +19,33 @@ def manageWebConfig(String configContent, String operation, String nodeName, Str
         switch (operation.toLowerCase()) {
             case "isexist":
                 result.success = (targetNode != null)
-                result.message = result.success ? "Node '${nodeName}' exists." : "Node '${nodeName}' does not exist."
+                result.message = result.success ? "Node exists." : "Node does not exist."
                 break
-
             case "add":
                 if (targetNode) {
-                    result.message = "Node '${nodeName}' already exists."
+                    result.message = "Node already exists."
                 } else {
-                    def parentNode = xml // default to root
+                    def parentNode = xml
                     parentNode.appendNode(nodeName, newValue ?: "")
                     def sw = new StringWriter()
                     new XmlNodePrinter(new PrintWriter(sw)).print(xml)
                     result.success = true
-                    result.message = "Node '${nodeName}' added successfully."
+                    result.message = "Node added."
                     result.modifiedContent = sw.toString()
                 }
                 break
-
             case "update":
                 if (targetNode) {
                     targetNode.value = newValue
                     def sw = new StringWriter()
                     new XmlNodePrinter(new PrintWriter(sw)).print(xml)
                     result.success = true
-                    result.message = "Node '${nodeName}' updated successfully."
+                    result.message = "Node updated."
                     result.modifiedContent = sw.toString()
                 } else {
-                    result.message = "Node '${nodeName}' not found for update."
+                    result.message = "Node not found to update."
                 }
                 break
-
             case "delete":
                 if (targetNode) {
                     def parent = targetNode.parent()
@@ -51,15 +53,16 @@ def manageWebConfig(String configContent, String operation, String nodeName, Str
                     def sw = new StringWriter()
                     new XmlNodePrinter(new PrintWriter(sw)).print(xml)
                     result.success = true
-                    result.message = "Node '${nodeName}' deleted successfully."
+                    result.message = "Node deleted."
                     result.modifiedContent = sw.toString()
                 } else {
-                    result.message = "Node '${nodeName}' not found to delete."
+                    result.message = "Node not found to delete."
                 }
                 break
         }
-    } catch (Exception e) {
-        result.message = "Exception occurred: ${e.message}"
+
+    } catch (e) {
+        result.message = "Exception: ${e.message}"
     }
 
     return result
