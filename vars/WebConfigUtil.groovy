@@ -1,4 +1,4 @@
-def call(String configContent, String operation, String nodeName, String keyName = null, String newValue = null) {
+def call(String configContent, String operation, String parentNodeName, String keyName = null, String newValue = null, String childTagName = "add") {
     def result = [success: false, message: ""]
     def supportedOps = ["add", "delete", "update", "isexist"]
 
@@ -19,30 +19,30 @@ def call(String configContent, String operation, String nodeName, String keyName
 
     try {
         def xml = new XmlParser().parseText(configContent)
-        def parentNode = xml.'**'.find { it.name().toString() == nodeName }
+        def parentNode = xml.'**'.find { it.name().toString().equalsIgnoreCase(parentNodeName) }
 
         if (!parentNode) {
-            result.message = "Node '${nodeName}' not found."
+            result.message = "Parent node '${parentNodeName}' not found."
             return result
         }
 
-        def targetNode = parentNode.'add'.find { it.@key == keyName }
+        def targetNode = parentNode."${childTagName}".find { it.@key == keyName }
 
         switch (operation.toLowerCase()) {
             case "isexist":
                 result.success = (targetNode != null)
-                result.message = result.success ? "Key '${keyName}' exists." : "Key '${keyName}' does not exist."
+                result.message = result.success ? "Key '${keyName}' exists in <${parentNodeName}>." : "Key '${keyName}' does not exist."
                 break
 
             case "add":
                 if (targetNode) {
-                    result.message = "Key '${keyName}' already exists."
+                    result.message = "Key '${keyName}' already exists in <${parentNodeName}>."
                 } else {
-                    parentNode.appendNode('add', [key: keyName, value: newValue ?: ""])
+                    parentNode.appendNode(childTagName, [key: keyName, value: newValue ?: ""])
                     def sw = new StringWriter()
                     new XmlNodePrinter(new PrintWriter(sw)).print(xml)
                     result.success = true
-                    result.message = "Key '${keyName}' added."
+                    result.message = "Key '${keyName}' added to <${parentNodeName}>."
                     result.modifiedContent = sw.toString()
                 }
                 break
@@ -53,10 +53,10 @@ def call(String configContent, String operation, String nodeName, String keyName
                     def sw = new StringWriter()
                     new XmlNodePrinter(new PrintWriter(sw)).print(xml)
                     result.success = true
-                    result.message = "Key '${keyName}' updated."
+                    result.message = "Key '${keyName}' updated in <${parentNodeName}>."
                     result.modifiedContent = sw.toString()
                 } else {
-                    result.message = "Key '${keyName}' not found to update."
+                    result.message = "Key '${keyName}' not found in <${parentNodeName}>."
                 }
                 break
 
@@ -66,10 +66,10 @@ def call(String configContent, String operation, String nodeName, String keyName
                     def sw = new StringWriter()
                     new XmlNodePrinter(new PrintWriter(sw)).print(xml)
                     result.success = true
-                    result.message = "Key '${keyName}' deleted."
+                    result.message = "Key '${keyName}' deleted from <${parentNodeName}>."
                     result.modifiedContent = sw.toString()
                 } else {
-                    result.message = "Key '${keyName}' not found to delete."
+                    result.message = "Key '${keyName}' not found in <${parentNodeName}>."
                 }
                 break
         }
