@@ -1,5 +1,3 @@
-package com.util
-
 import groovy.xml.XmlNodePrinter
 import groovy.xml.XmlParser
 
